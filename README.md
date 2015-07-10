@@ -1,4 +1,4 @@
-<center><bold>ESP8266-Web-Server-for-Mobile-Sensors</bold></center>
+ESP8266-Web-Server-for-Mobile-Sensors
 
 This project is based on the EspressIf SDK IoT_Demo example. This initial version functions as a web server with the WIFI 
 operating in AP mode. 
