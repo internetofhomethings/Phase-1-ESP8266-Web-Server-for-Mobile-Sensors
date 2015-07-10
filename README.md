@@ -18,7 +18,7 @@ Request URL:
 http://192.168.22.1:9703/?request=GetSensors
 
 
-JSON string returned:
+JSON string returned (example):
 
 {
 "B_Pressure":"29.24",
