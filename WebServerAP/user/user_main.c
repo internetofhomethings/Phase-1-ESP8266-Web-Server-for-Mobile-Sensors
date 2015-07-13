@@ -73,7 +73,6 @@ struct espconn Conn;
 esp_tcp ConnTcp;
 extern int ets_uart_printf(const char *fmt, ...);
 int (*console_printf)(const char *fmt, ...) = ets_uart_printf;
-static char macaddr[6];
 //mDNS
 static char szH[40],szS[10],szN[30];
 struct mdns_info thismdns;
@@ -87,6 +86,8 @@ LOCAL nTcnt=0;
 //Sensor Values & System Metrics
 DATA_Sensors mySensors;
 DATA_System sysParams;
+
+DHT_Sensor DHsensor;
 
 extern uint8 device_recon_count;
 extern struct espconn user_conn;
@@ -122,11 +123,15 @@ const char *sEspconnErr[] =
 		"Connection closed",     // ERR_CLSD       -10
 		"Not connected",         // ERR_CONN       -11
 		"Illegal argument",      // ERR_ARG        -12
-		"Address in use",        // ERR_USE        -13
+		"Address i"
+		"Error in   use",        // ERR_USE        -13
 		"Low-level netif error", // ERR_IF         -14
 		"Already connected"      // ERR_ISCONN     -15
 };
 #endif
+
+#define DEGREES_C 0
+#define DEGREES_F 1
 
 static void ICACHE_FLASH_ATTR InitializemDNS(struct ip_info ipConfig) {
 	//Initialize mDNS Responder
@@ -211,8 +216,6 @@ void wifi_event_cb(System_Event_t *evt) {
 			//Start Web Server (Upon first connection)
 			if(!serverinit) {
 				user_webserver_init(SERVER_PORT);
-				//wifi_get_ip_info(SOFTAP_IF, &ipConfig);
-				//InitializemDNS(ipConfig);
 				serverinit=1;
 			}
 			//Start periodic loop
@@ -293,7 +296,7 @@ extern void get_temp_ds18b20(int sensor, int units, char * temp)
 	ds_init();
 	switch(sensor) {
 		case 1:
-			//Inside Sensor
+			//Sensor 1 (Replace with unique 8-byte ds18b20 Address)
 			addr[0]=0x10;
 			addr[1]=0x2E;
 			addr[2]=0x4B;
@@ -304,7 +307,7 @@ extern void get_temp_ds18b20(int sensor, int units, char * temp)
 			addr[7]=0x5B;
 			break;
 		case 2:
-			//Outside Sensor
+			//Sensor 2 (Replace with unique 8-byte ds18b20 Address)
 			addr[0]=0x10;
 			addr[1]=0x13;
 			addr[2]=0x45;
@@ -314,16 +317,8 @@ extern void get_temp_ds18b20(int sensor, int units, char * temp)
 			addr[6]=0x00;
 			addr[7]=0x5E;
 			break;
-		case 3:
-		    //Attic Sensor
-		    addr[0]=0x10;
-		    addr[1]=0xCB;
-		    addr[2]=0x45;
-		    addr[3]=0x2F;
-		    addr[4]=0x00;
-		    addr[5]=0x08;
-		    addr[6]=0x00;
-		    addr[7]=0x3B;
+		default:
+		    //No Sensor Address set
 			break;
 	}
 	// perform the conversion
@@ -363,7 +358,7 @@ extern void get_temp_ds18b20(int sensor, int units, char * temp)
 		SignBit=0;
 	}
 	FractF = ((Fract * 9)/5);
-	if(units==0) {
+	if(units==DEGREES_C) {
 		os_sprintf(temp,"%c%d.%d", SignBit ? '-' : '+', Whole, Fract < 10 ? 0 : Fract < 100 ? Fract/10 : Fract/100);
 	}
 	else {
@@ -374,69 +369,48 @@ extern void get_temp_ds18b20(int sensor, int units, char * temp)
 LOCAL void ICACHE_FLASH_ATTR loop_cb(void *arg)
 {
 	char szT[32];
-	DHT_Sensor DHsensor;
-	DHT_Sensor_Data data;
 
-	DHsensor.pin = 5;  //GPIO14
-	DHsensor.type = DHT11;
+	DHT_Sensor_Data data;
 
     int32_t temperature;
     int32_t pressure;
 
     //Read Sensors & copy values here
-	os_sprintf(mySensors.tInside,"%s","66.8");
-	os_sprintf(mySensors.tOutside,"%s","79.2");
-	os_sprintf(mySensors.tAttic,"%s","88.5");
-	os_sprintf(mySensors.tDht11,"%s","69.1");
-	os_sprintf(mySensors.hDht11,"%s","34.7");
-	if(bmppresent) {
-	    temperature = BMP180_GetTemperature();
-	    pressure = BMP180_GetPressure(OSS_0);
-    	os_sprintf(mySensors.pBmp085,"%ld.%02d", pressure/3386,((pressure%3386)*100)/3386);
-    	os_sprintf(mySensors.tBmp085,"%ld.%01d", ((temperature*18)/100) + 32,(temperature*18)%100);
-	}
-	else {
-		os_sprintf(mySensors.pBmp085,"%s","29.7");
-		os_sprintf(mySensors.tBmp085,"%s","71.1");
-	}
-	os_sprintf(mySensors.aBmp085,"%s","555.0");
-/*****
-	switch(nTcnt%5) {
-
+    // Change nTcnt%2 to nTcnt%3 for 3 sensors...
+	switch(nTcnt%2) {
 		case 0:
-			//get_temp_ds18b20(1,1,tInside);
-			ets_uart_printf("DS InsideTp: %s F\r\n",tInside);
+			if(DHTRead(&DHsensor, &data)) {
+			    DHTFloat2String(mySensors.tDht11, ((9/5) * data.temperature)+32);
+			    DHTFloat2String(mySensors.hDht11, data.humidity);
+			}
+			else {
+				os_sprintf(mySensors.tDht11,"%s","78.3");
+				os_sprintf(mySensors.hDht11,"%s","39");
+			}
 			break;
 		case 1:
-			//get_temp_ds18b20(2,1,tOutside);
-			ets_uart_printf("DS OutsideTp: %s F\r\n",tOutside);
+			if(bmppresent) {
+				temperature = BMP180_GetTemperature();
+				pressure = BMP180_GetPressure(OSS_0);
+				os_sprintf(mySensors.pBmp085,"%ld.%02d", pressure/3386,((pressure%3386)*100)/3386);
+				os_sprintf(mySensors.tBmp085,"%ld.%01d", ((temperature*18)/100) + 32,(temperature*18)%100);
+			}
+			else {
+				os_sprintf(mySensors.pBmp085,"%s","29.7");
+				os_sprintf(mySensors.tBmp085,"%s","71.1");
+			}
+			os_sprintf(mySensors.aBmp085,"%s","555.0");
 			break;
-		case 2:
-			//get_temp_ds18b20(3,1,tAttic);
-			ets_uart_printf("DS AtticTp: %s F\r\n",tAttic);
+		case 2: //Placeholder for a ds18b20 temperature sensor #1 (Not called in this example)
+			get_temp_ds18b20(1,DEGREES_F,mySensors.t1Ds18b20);
 			break;
-		case 3:
-			//DHTRead(&DHsensor, &data);
-			//DHTFloat2String(tDht11, ((9/5) * data.temperature)+32);
-			//DHTFloat2String(hDht11, data.humidity);
-			ets_uart_printf("DHT11 Temp: %s\r\n",tDht11);
-			ets_uart_printf("DHT11 Humi: %s\r\n",hDht11);
-			break;
-		case 4:
-		    //This is where we read the hardware sensors
-		    //temperature = BMP180_GetTemperature();
-		    //pressure = BMP180_GetPressure(OSS_0);
-	    	//os_sprintf(pBmp085,"%ld.%01d", pressure/3386,(pressure%3386)/1000);
-	    	//os_sprintf(tBmp085,"%ld.%01d", ((temperature*18)/100) + 32,(temperature*18)%100);
-	    	//os_sprintf(aBmp085,"%03d", 328 * (BMP180_CalcAltitude(pressure)/100000));
-			ets_uart_printf("BMP085 Pressure: %s\r\n",pBmp085);
-			ets_uart_printf("BMP085 Temperat: %s\r\n",tBmp085);
-			ets_uart_printf("BMP085 Altitude: %s\r\n",aBmp085);
+		case 3: //Placeholder for a ds18b20 temperature sensor #2 (Not called in this example)
+			get_temp_ds18b20(2,DEGREES_F,mySensors.t2Ds18b20);
 			break;
 		default:
 			break;
 	}
-    *******************/
+
 
 	//Get System Parameters
 	os_sprintf(sysParams.systime,"%d",system_get_time()/1000000);
@@ -482,6 +456,11 @@ void user_init(void)
 
 	//Initialize Barometric/Temperature Sensor
 	bmppresent = BMP180_Init();
+
+	//Initialize Humidity/Temperature Sensor
+	DHsensor.pin = 5;  //GPIO14
+	DHsensor.type = DHT22;
+	DHTInit(&DHsensor);
 
 	//Initialize Wifi in AP Mode (Waiting for connection)
 	setup_wifi_ap_mode();

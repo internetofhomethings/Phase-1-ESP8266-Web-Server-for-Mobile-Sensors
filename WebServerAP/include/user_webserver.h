@@ -32,14 +32,13 @@ typedef enum _ParmType {
 } ParmType;
 
 typedef struct DATA_Sensors {
-	char tInside[DATASize];
-    char tOutside[DATASize];
-    char tAttic[DATASize];
     char tDht11[DATASize];
     char hDht11[DATASize];
     char tBmp085[DATASize];
     char pBmp085[DATASize];
     char aBmp085[DATASize];
+    char t1Ds18b20[DATASize];
+    char t2Ds18b20[DATASize];
 } DATA_Sensors;
 
 typedef struct DATA_System {
