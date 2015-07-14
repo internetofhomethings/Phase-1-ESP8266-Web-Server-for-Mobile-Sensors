@@ -2,14 +2,14 @@
 #define __USER_CONFIG_H__
 
 #define USE_WIFI_MODE		STATION_MODE
-#define WIFI_CLIENTSSID		"dsa"
-#define WIFI_CLIENTPASSWORD	"1957090922"
+#define WIFI_CLIENTSSID		"yourWiFiSSID"
+#define WIFI_CLIENTPASSWORD	"yourPASSWORD"
 #define WIFI_AP_NAME		"ESP8266N4"
 #define WIFI_AP_PASSWORD	"00000000"
 #define TCPSERVERIP			"192.168.0.106"
 #define TCPSERVERPORT		9703
 #define PLATFORM_DEBUG		true
-#define DNS_SVR             "surfnturf57.loc"
+#define DNS_SVR             "myesp8266.loc"
 #define DNS_SVR_NAME        "iot"
 #define DNS_TXTDATA         "version = now"
 //#define LWIP_DEBUG		true
