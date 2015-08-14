@@ -458,7 +458,7 @@ void user_init(void)
 	bmppresent = BMP180_Init();
 
 	//Initialize Humidity/Temperature Sensor
-	DHsensor.pin = 5;  //GPIO14
+	DHsensor.pin = 1;  //GPIO5
 	DHsensor.type = DHT22;
 	DHTInit(&DHsensor);
 
